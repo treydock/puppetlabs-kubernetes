@@ -189,6 +189,10 @@
 #     This will tell etcd how many WAL files to be kept
 #   Defaults to 5
 #
+# [*etcd_listen_metric_urls*]
+#     The URL(s) to listen on to respond to /metrics and /health for etcd
+#   Defaults to undef
+#
 # [*etcd_ca_key*]
 #   This is the ca certificate key data for the etcd cluster. This must be passed as string not as a file.
 #   Defaults to undef
@@ -524,6 +528,7 @@ class kubernetes (
   Optional[Enum['periodic', 'revision']] $etcd_compaction_method = 'periodic',
   Variant[String, Integer] $etcd_compaction_retention            = 0,
   Integer $etcd_max_wals                                         = 5,
+  Optional[String] $etcd_listen_metric_urls                      = undef,
   Optional[String] $etcd_ca_key                                  = undef,
   Optional[String] $etcd_ca_crt                                  = undef,
   Optional[String] $etcdclient_key                               = undef,
