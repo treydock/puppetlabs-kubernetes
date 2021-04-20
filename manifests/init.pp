@@ -50,6 +50,10 @@
 #  The URL to download the containerd archive
 #  Defaults to https://github.com/containerd/containerd/releases/download/v${containerd_version}/${containerd_archive}
 #
+# [*containerd_default_runtime_name*]
+#   The default runtime to use with containerd
+#   Defaults to runc
+#
 # [*dns_domain*]
 #   This is a string that sets the dns domain in kubernetes cluster
 #   Default cluster.local
@@ -594,6 +598,7 @@ class kubernetes (
   Optional[String] $containerd_archive_checksum                  = undef,
   Optional[String] $containerd_source                            =
     "https://github.com/containerd/containerd/releases/download/v${containerd_version}/${containerd_archive}",
+  Enum['runc','nvidia'] $containerd_default_runtime_name         = 'runc',
   String $etcd_archive                                           = "etcd-v${etcd_version}-linux-amd64.tar.gz",
   Optional[String] $etcd_archive_checksum                        = undef,
   String $etcd_package_name                                      = 'etcd-server',
