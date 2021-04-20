@@ -50,6 +50,16 @@
 #  The URL to download the containerd archive
 #  Defaults to https://github.com/containerd/containerd/releases/download/v${containerd_version}/${containerd_archive}
 #
+# [*containerd_config_template*]
+#   The template to use for containerd configuration
+#   This value is ignored if containerd_config_source is defined
+#   Default to 'kubernetes/containerd/config.toml.erb'
+#
+# [*containerd_config_source*]
+#   The source of the containerd configuration
+#   This value overrides containerd_config_template
+#   Default to undef
+#
 # [*containerd_default_runtime_name*]
 #   The default runtime to use with containerd
 #   Defaults to runc
@@ -598,6 +608,8 @@ class kubernetes (
   Optional[String] $containerd_archive_checksum                  = undef,
   Optional[String] $containerd_source                            =
     "https://github.com/containerd/containerd/releases/download/v${containerd_version}/${containerd_archive}",
+  String $containerd_config_template                             = 'kubernetes/containerd/config.toml.erb',
+  Optional[String] $containerd_config_source                     = undef,
   Enum['runc','nvidia'] $containerd_default_runtime_name         = 'runc',
   String $etcd_archive                                           = "etcd-v${etcd_version}-linux-amd64.tar.gz",
   Optional[String] $etcd_archive_checksum                        = undef,

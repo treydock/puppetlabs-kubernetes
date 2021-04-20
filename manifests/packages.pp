@@ -20,6 +20,8 @@ class kubernetes::packages (
   Optional[String] $containerd_archive                  = $kubernetes::containerd_archive,
   Optional[String] $containerd_archive_checksum         = $kubernetes::containerd_archive_checksum,
   Optional[String] $containerd_source                   = $kubernetes::containerd_source,
+  String $containerd_config_template                    = $kubernetes::containerd_config_template,
+  Optional[String] $containerd_config_source            = $kubernetes::containerd_config_source,
   Enum['runc','nvidia']
     $containerd_default_runtime_name                    = $kubernetes::containerd_default_runtime_name,
   String $etcd_archive                                  = $kubernetes::etcd_archive,
@@ -214,13 +216,19 @@ class kubernetes::packages (
           group  => 'root',
         }
 
+        if $containerd_config_source {
+          $_containerd_config_content = undef
+        } else {
+          $_containerd_config_content = template($containerd_config_template)
+        }
         # Generate using 'containerd config default'
         file { '/etc/containerd/config.toml':
           ensure  => file,
           owner   => 'root',
           group   => 'root',
           mode    => '0644',
-          content => template('kubernetes/containerd/config.toml.erb'),
+          content => $_containerd_config_content,
+          source  => $containerd_config_source,
           require => [File['/etc/containerd'], Package[$containerd_package_name]],
           notify  => Service['containerd'],
         }
@@ -237,13 +245,19 @@ class kubernetes::packages (
           group  => 'root',
         }
 
+        if $containerd_config_source {
+          $_containerd_config_content = undef
+        } else {
+          $_containerd_config_content = template($containerd_config_template)
+        }
         # Generate using 'containerd config default'
         file { '/etc/containerd/config.toml':
           ensure  => file,
           owner   => 'root',
           group   => 'root',
           mode    => '0644',
-          content => template('kubernetes/containerd/config.toml.erb'),
+          content => $_containerd_config_content,
+          source  => $containerd_config_source,
           require => [File['/etc/containerd'], Package[$containerd_package_name]],
           notify  => Service['containerd'],
         }
