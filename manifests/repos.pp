@@ -71,31 +71,31 @@ class kubernetes::repos (
     }
     case $facts['os']['family'] {
       'Debian': {
+        apt::source { 'kubernetes':
+          location => pick($kubernetes_apt_location,"https://pkgs.k8s.io/core:/stable:/v${minor_version}/deb"),
+          release  => pick($kubernetes_apt_release, '/'),
+          repos    => $_repos,
+        }
+
         if $kubernetes_apt_location =~ String[1] {
-          apt::source { 'kubernetes':
-            location => pick($kubernetes_apt_location,"https://pkgs.k8s.io/core:/stable:/v${minor_version}/deb"),
-            release  => pick($kubernetes_apt_release, '/'),
-            repos    => $_repos,
-            key      => {
+          Apt::Source<| title == 'kubernetes' |> {
+            key => {
               'id'     => $kubernetes_key_id,
               'source' => $kubernetes_key_source,
-            },
+            }
           }
         } else {
           # For pkgs.k8s.io use GPG siging key
-          $_keyring = '/etc/apt/keyrings/kubernetes-apt-keyring.gpg'
+          $_keyring = '/usr/share/keyrings/kubernetes-apt-keyring.gpg'
           archive { '/tmp/kubernetes-apt-keyring.gpg':
             source          => "https://pkgs.k8s.io/core:/stable:/v${minor_version}/deb/Release.key",
             extract         => true,
-            extract_path    => '/etc/apt/keyrings/',
+            extract_path    => '/usr/share/keyrings',
             extract_command => 'gpg --dearmor < %s > kubernetes-apt-keyring.gpg',
             creates         => $_keyring,
           }
 
-          apt::source { 'kubernetes':
-            location => pick($kubernetes_apt_location,"https://pkgs.k8s.io/core:/stable:/v${minor_version}/deb"),
-            release  => pick($kubernetes_apt_release, '/'),
-            repos    => $_repos,
+          Apt::Source<| title == 'kubernetes' |> {
             keyring  => $_keyring,
             require  => Archive['/tmp/kubernetes-apt-keyring.gpg'],
           }
