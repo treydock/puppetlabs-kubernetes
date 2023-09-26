@@ -87,6 +87,8 @@ class kubernetes::repos (
         } else {
           # For pkgs.k8s.io use GPG siging key
           $_keyring = '/usr/share/keyrings/kubernetes-apt-keyring.gpg'
+          # TODO: Switch to apt::keyring once supported by puppetlabs-apt
+          # see: https://github.com/puppetlabs/puppetlabs-apt/pull/1128
           archive { '/tmp/kubernetes-apt-keyring.gpg':
             source          => "https://pkgs.k8s.io/core:/stable:/v${minor_version}/deb/Release.key",
             extract         => true,
