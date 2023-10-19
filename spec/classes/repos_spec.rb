@@ -240,6 +240,7 @@ describe 'kubernetes::repos', type: :class do
         'enabled' => '1',
         'baseurl' => 'https://pkgs.k8s.io/core:/stable:/v1.28/rpm/',
         'gpgkey' => 'https://pkgs.k8s.io/core:/stable:/v1.28/rpm/repodata/repomd.xml.key',
+        'exclude' => 'kubelet kubeadm kubectl cri-tools kubernetes-cni',
       )
     }
   end
