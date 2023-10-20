@@ -134,7 +134,6 @@ class kubernetes::repos (
           gpgkey   => pick($kubernetes_yum_gpgkey,"https://pkgs.k8s.io/core:/stable:/v${minor_version}/rpm/repodata/repomd.xml.key"),
           enabled  => 1,
           gpgcheck => 1,
-          exclude  => 'kubelet kubeadm kubectl cri-tools kubernetes-cni',
         }
       }
 
