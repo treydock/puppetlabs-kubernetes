@@ -1,4 +1,3 @@
-[![Build Status](https://travis-ci.org/puppetlabs/puppetlabs-kubernetes.svg?branch=main)](https://travis-ci.org/puppetlabs/puppetlabs-kubernetes)
 [![Puppet Forge](https://img.shields.io/puppetforge/v/puppetlabs/kubernetes.svg)](https://forge.puppetlabs.com/puppetlabs/kubernetes)
 [![Puppet Forge Downloads](http://img.shields.io/puppetforge/dt/puppetlabs/kubernetes.svg)](https://forge.puppetlabs.com/puppetlabs/kubernetes)
 
@@ -69,6 +68,7 @@ The above parameters are:
 * `ETCD_IP`: The IP each etcd member listens on. We recommend passing the fact for the interface to be used by the cluster.
 * `KUBE_API_ADVERTISE_ADDRESS`: The IP each etcd/apiserver instance uses on each controller. We recommend passing the fact for the interface to be used by the cluster.
 * `INSTALL_DASHBOARD`: A boolean which specifies whether to install the dashboard.
+* `KEY_SIZE`: Number of bits in certificates (default: `2048`).
 
 Kubetool creates:
 
@@ -125,6 +125,27 @@ To make a node a worker, add the following code to the manifest:
 class {'kubernetes':
   worker => true,
 }
+```
+
+#### Network Plugins
+
+Kubernetes supports multiple [networking plugins](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/) that implements the [networking model](https://kubernetes.io/docs/concepts/services-networking/#the-kubernetes-network-model).
+
+This module supports following [Container Network Interface](https://github.com/containernetworking/cni) (CNI) plugins:
+
+- `flannel`
+```yaml
+kubernetes::cni_network_provider: https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+kubernetes::cni_pod_cidr: 10.244.0.0/16
+kubernetes::cni_provider: flannel
+```
+- `weave`
+- `calico-node`
+- `cilium`
+```yaml
+kubernetes::cni_network_provider: https://raw.githubusercontent.com/cilium/cilium/1.4.3/examples/kubernetes/1.26/cilium.yaml
+kubernetes::cni_pod_cidr: 10.244.0.0/16
+kubernetes::cni_provider: cilium
 ```
 
 #### Installing Kubernetes on different OS
@@ -280,6 +301,14 @@ Valid values are `cri_containerd` or `docker`.
 
 Defaults to `docker`.
 
+#### `container_runtime_use_proxy`
+
+When set to true will cause the new proxy variables to be applied to the container runtime. Currently only implemented for Docker.
+
+Valid values are `true`, `false`.
+
+Defaults to `false`.
+
 #### `controller`
 
 Specifies whether to set the node as a Kubernetes controller.
@@ -363,6 +392,18 @@ For example,
     },
 }
 ```
+
+### `containerd_sandbox_image`
+
+The configuration for the image pause container.
+
+Default `registry.k8s.io/pause:3.2`.
+
+### `containerd_socket`
+
+The path to containerd GRPC socket.
+
+Default: `/run/containerd/containerd.sock`
 
 #### `controller_address`
 
@@ -634,11 +675,23 @@ The peer certificate key data for the etcd cluster. This value must be passed as
 
 Defaults to `undef`.
 
+#### `http_proxy`
+
+The string value to set for the HTTP_PROXY environment variable.
+
+Defaults to `undef`.
+
+#### `https_proxy`
+
+The string value to set for the HTTPS_PROXY environment variable.
+
+Defaults to `undef`.
+
 #### image_repository
 
 The container registry to pull control plane images from.
 
-Defaults to k8s.gcr.io
+Defaults to registry.k8s.io
 
 #### `install_dashboard`
 
@@ -740,6 +793,14 @@ The URL for the APT repo gpg key.
 
 Defaults to `https://packages.cloud.google.com/apt/doc/apt-key.gpg`.
 
+#### `kubelet_use_proxy`
+
+When set to true will cause the new proxy variables to be applied to the Kubelet.
+
+Valid values are `true`, `false`.
+
+Defaults to `false`.
+
 #### `kubernetes_yum_baseurl`
 
 The YUM repo URL for the Kubernetes packages.
@@ -768,11 +829,30 @@ Valid values are `true`, `false`.
 
 Defaults to `true`.
 
+#### `no_proxy`
+
+The string value to set for the NO_PROXY environment variable.
+
+Defaults to `undef`.
+
 #### `node_label`
 
 An override to the label of a node.
 
 Defaults to `hostname`.
+
+#### `node_extra_taints`
+
+Additional taints for node.
+Defaults to `undef`.
+
+For example,
+
+```puppet
+  [{'key' => 'dedicated','value' => 'NewNode','effect' => 'NoSchedule', 'operator', => 'Equal'}]
+```
+
+About kubernetes taints `https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/`
 
 #### `runc_source`
 

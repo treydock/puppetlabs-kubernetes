@@ -1,24 +1,18 @@
-FROM golang:1.12.13-alpine3.9
+FROM golang:1.19-alpine3.16
 
-ENV GOPATH /go
 ENV USER root
 
 RUN set -x && \
-  apk --no-cache add git gcc libc-dev && \
-  go get github.com/cloudflare/cfssl/cmd/... && \
-  cd /go/src/github.com/cloudflare/cfssl && \
-  go get github.com/GeertJohan/go.rice/rice && rice embed-go -i=./cli/serve && \
-  mkdir bin && cd bin && \
-  go build ../cmd/cfssl && \
-  go build ../cmd/cfssljson && \
-  go build ../cmd/mkbundle && \
-  go build ../cmd/multirootca && \
-  go get -u github.com/cloudflare/cfssl_trust/... && \
+  apk --no-cache add gcc libc-dev && \
+  go install github.com/cloudflare/cfssl/cmd/...@v1.6.3 && \
+  go install github.com/cloudflare/cfssl_trust/...@latest && \
   echo "Build complete."
 
-FROM ruby:2.3.5-alpine
-COPY --from=0 /go/src/github.com/cloudflare/cfssl_trust /etc/cfssl
-COPY --from=0 /go/src/github.com/cloudflare/cfssl/bin/ /usr/bin
+FROM ruby:3.0-alpine3.16
+RUN mkdir /etc/cfssl
+COPY --from=0 /go/pkg/mod/github.com/cloudflare/cfssl_trust@*/*.crt* /etc/cfssl/
+COPY --from=0 /go/bin/ /usr/bin/
+RUN gem install slop
 COPY . /etc/k8s
 
 RUN set -x && \
@@ -26,4 +20,4 @@ RUN set -x && \
 
 WORKDIR /mnt
 
-ENTRYPOINT ["sh", "-c", "/etc/k8s/start-kubetool.sh"]
+ENTRYPOINT ["ruby", "/etc/k8s/kube_tool.rb"]

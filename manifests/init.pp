@@ -53,12 +53,16 @@
 # [*containerd_config_template*]
 #   The template to use for containerd configuration
 #   This value is ignored if containerd_config_source is defined
-#   Default to 'kubernetes/containerd/config.toml.erb'
+#   Default to 'kubernetes/containerd/config.toml.epp'
 #
 # [*containerd_config_source*]
 #   The source of the containerd configuration
 #   This value overrides containerd_config_template
 #   Default to undef
+#
+# [*containerd_socket*]
+#   The path to containerd GRPC socket
+#   Defaults to /run/containerd/containerd.sock
 #
 # [*containerd_plugins_registry*]
 #  The configuration for the image registries used by containerd when containerd_install_method is package.
@@ -69,6 +73,10 @@
 #   The default runtime to use with containerd
 #   Defaults to runc
 #
+# [*containerd_sandbox_image*]
+#  The configuration for the image pause container
+#  Defaults registry.k8s.io/pause:3.2
+#
 # [*dns_domain*]
 #   This is a string that sets the dns domain in kubernetes cluster
 #   Default cluster.local
@@ -76,7 +84,7 @@
 # [*docker_version*]
 #   This is the version of the docker runtime that you want to install.
 #   Defaults to 17.03.0.ce-1.el7.centos on RedHat
-#   Defaults to 17.03.0~ce-0~ubuntu-xenial on Ubuntu
+#   Defaults to 5:20.10.11~3-0~ubuntu-(distro codename) on Ubuntu
 #
 # [*docker_package_name*]
 #  The docker package name to download from an upstream repo
@@ -172,6 +180,10 @@
 #   The name of the etcd instance.
 #   An example with hiera would be kubernetes::etcd_hostname: "%{::fqdn}"
 #   Defaults to hostname
+#
+# [*etcd_data_dir*]
+# Directory, where etcd data is stored.
+# Defaults to /var/lib/etcd.
 #
 # [*etcd_ip*]
 #   The ip address that you want etcd to use for communications.
@@ -314,6 +326,12 @@
 #  Defaults to hostname.
 #   NOTE: Ignored when cloud_provider is AWS, until this lands fixed https://github.com/kubernetes/kubernetes/pull/61878
 #
+# [*node_extra_taints*]
+# Additional taints for node.
+# Example:
+#   [{'key' => 'dedicated','value' => 'NewNode','effect' => 'NoSchedule', 'operator' => 'Equal'}]
+#  Defaults to undef
+#
 # [*token*]
 #   A string to use when joining nodes to the cluster. Must be in the form of '[a-z0-9]{6}.[a-z0-9]{16}'
 #   Defaults to undef
@@ -358,7 +376,7 @@
 #
 # [*image_repository*]
 #  The container registry to pull control plane images from
-#  Defaults to k8s.gcr.io
+#  Defaults to registry.k8s.io
 #
 # [*kubeadm_extra_config*]
 #  A hash containing extra configuration data to be serialised with `to_yaml` and appended to the config.yaml file used by kubeadm.
@@ -417,7 +435,7 @@
 #
 # [*docker_apt_release*]
 #  The release name for the APT repo for the Docker packages.
-#  Defaults to 'ubuntu-${facts.os.distro.codename}'
+#  Defaults to $facts.os.distro.codename
 #
 # [*docker_apt_repos*]
 #  The repos to install from the Docker APT url
@@ -482,56 +500,98 @@
 #
 # [*cgroup_driver*]
 #  The cgroup driver to be used.
-#  Defaults to 'systemd' on EL and 'cgroupfs' otherwise
+#  Defaults to 'systemd'
 #
 # [*environment*]
-# The environment passed to kubectl commands.
-# Defaults to setting HOME and KUBECONFIG variables
+#  The environment passed to kubectl commands.
+#  Defaults to setting HOME and KUBECONFIG variables
 #
 # [*ttl_duration*]
-# Availability of the token
-# Default to 24h
+#  Availability of the token
+#  Default to 24h
 #
 # [*metrics_bind_address*]
-# Set the metricsBindAddress (to allow prometheus)
-# Default to 127.0.0.1
+#  Set the metricsBindAddress (to allow prometheus)
+#  Default to 127.0.0.1
 #
 # [*conntrack_max_per_core*]
-# Maximum number of NAT connections to track per CPU core.
-# Set to 0 to leave the limit as-is and ignore conntrack_min.
-# Default to 32768
+#  Maximum number of NAT connections to track per CPU core.
+#  Set to 0 to leave the limit as-is and ignore conntrack_min.
+#  Default to 32768
 #
 # [*conntrack_min*]
-# Minimum number of conntrack entries to allocate, regardless of conntrack-max-per-core.
-# Set conntrack_max_per_core to 0 to leave the limit as-is
-# Default to 131072
+#   Minimum number of conntrack entries to allocate, regardless of conntrack-max-per-core.
+#   Set conntrack_max_per_core to 0 to leave the limit as-is
+#   Default to 131072
 #
 # [*conntrack_tcp_wait_timeout*]
-# NAT timeout for TCP connections in the CLOSE_WAIT state.
-# Default to 1h0m0s
+#   NAT timeout for TCP connections in the CLOSE_WAIT state.
+#   Default to 1h0m0s
 #
 # [*conntrack_tcp_stablished_timeout*]
-# Idle timeout for established TCP connections (0 to leave as-is).
-# Default to 24h0m0s
+#   Idle timeout for established TCP connections (0 to leave as-is).
+#   Default to 24h0m0s
 #
 # [*tmp_directory*]
-# Directory to use when downloading archives for install.
-# Default to /var/tmp/puppetlabs-kubernetes
+#   Directory to use when downloading archives for install.
+#   Default to /var/tmp/puppetlabs-kubernetes
 #
 # [*skip_phases*]
-# Allow kubeadm init skip some phases
-# Default: none phases skipped
+#   Allow kubeadm init skip some phases
+#   Default: none phases skipped
 #
 # [*skip_phases_join*]
-# Allow kubeadm join to skip some phases
-# Only works with Kubernetes 1.22+
-# Default: no phases skipped
+#   Allow kubeadm join to skip some phases
+#   Only works with Kubernetes 1.22+
+#   Default: no phases skipped
 #
 # [*feature_gates*]
-# Feature gate hash to be added to kubeadm configuration
-# Example:
+#  Feature gate hash to be added to kubeadm configuration
+#  Example:
 #   {'RootlessControlPlane' => true}
-# Default: undefined, no feature gates
+#   Default: undefined, no feature gates
+#
+# [*http_proxy*]
+#   Configure the HTTP_PROXY environment variable
+#   Defaults to undef
+#
+# [*https_proxy*]
+#   Configure the HTTPS_PROXY environment variable
+#   Defaults to undef
+#
+# [*no_proxy*]
+#   Configure the NO_PROXY environment variable
+#   Defaults to undef
+#
+# [*container_runtime_use_proxy*]
+#   Configure whether the container runtime should be configured to use a proxy.
+#   If set to true, the container runtime will use the http_proxy, https_proxy and
+#   no_proxy values.
+#   Defaults to false
+#
+# [*kubelet_use_proxy*]
+#   Configure whether the kubelet should be configured to use a proxy.
+#   If set to true, the kubelet will use the http_proxy, https_proxy and
+#   no_proxy values.
+#   Defaults to false
+#
+# [*api_server_count*]
+#   Defaults to undef
+#
+# [*runc_source_checksum*]
+#   Defaults to undef
+#
+# [*ignore_preflight_errors*]
+#   Defaults to undef
+#
+# [*join_discovery_file*]
+#   Defaults to undef
+#
+# [*wait_for_default_sa_tries*]
+#   Defaults to 5
+#
+# [*wait_for_default_sa_try_sleep*]
+#   Defaults to 6
 #
 # Authors
 # -------
@@ -541,156 +601,159 @@
 #
 #
 class kubernetes (
-  String $kubernetes_version                                     = '1.10.2',
-  String $kubernetes_cluster_name                                = 'kubernetes',
-  String $kubernetes_package_version                             = $facts['os']['family'] ? {
+  String $kubernetes_version                              = '1.10.2',
+  String $kubernetes_cluster_name                         = 'kubernetes',
+  String $kubernetes_package_version                      = $facts['os']['family'] ? {
     'Debian' => "${kubernetes_version}-00",
     'RedHat' => $kubernetes::kubernetes_version,
   },
-  String $container_runtime                                      = 'docker',
-  Optional[String] $containerd_version                           = '1.4.3',
-  Enum['archive','package'] $containerd_install_method           = 'archive',
-  String $containerd_package_name                                = 'containerd.io',
-  Optional[String] $docker_package_name                          = 'docker-engine',
-  Optional[String] $docker_version                               = $facts['os']['family'] ? {
-    'Debian' => '17.03.0~ce-0~ubuntu-xenial',
-    'RedHat' => '17.03.1.ce-1.el7.centos',
-  },
-  Boolean $pin_packages                                          = false,
-  Optional[String] $dns_domain                                   = 'cluster.local',
-  Optional[String] $cni_pod_cidr                                 = undef,
-  Boolean $controller                                            = false,
-  Boolean $worker                                                = false,
-  Boolean $manage_docker                                         = true,
-  Boolean $manage_etcd                                           = true,
-  Integer $kube_api_bind_port                                    = 6443,
-  Optional[String] $kube_api_advertise_address                   = undef,
-  Optional[String] $etcd_version                                 = '3.2.18',
-  Optional[String] $etcd_hostname                                = $facts['networking']['hostname'],
-  Optional[String] $etcd_ip                                      = undef,
-  Optional[Array] $etcd_peers                                    = undef,
-  Optional[String] $etcd_initial_cluster                         = undef,
-  Optional[String] $etcd_discovery_srv                           = undef,
-  Optional[Enum['new', 'existing']] $etcd_initial_cluster_state  = 'new',
-  Optional[Enum['periodic', 'revision']] $etcd_compaction_method = 'periodic',
-  Variant[String, Integer] $etcd_compaction_retention            = 0,
-  Integer $etcd_max_wals                                         = 5,
-  Integer $etcd_max_request_bytes                                = 1572864,
-  Optional[String] $etcd_listen_metric_urls                      = undef,
-  Optional[String] $etcd_ca_key                                  = undef,
-  Optional[String] $etcd_ca_crt                                  = undef,
-  Optional[String] $etcdclient_key                               = undef,
-  Optional[String] $etcdclient_crt                               = undef,
-  Optional[String] $etcdserver_crt                               = undef,
-  Optional[String] $etcdserver_key                               = undef,
-  Optional[String] $etcdpeer_crt                                 = undef,
-  Optional[String] $etcdpeer_key                                 = undef,
-  Optional[String] $cni_network_preinstall                       = undef,
-  Optional[String] $cni_network_provider                         = undef,
-  Optional[String] $cni_provider                                 = undef,
-  Optional[String] $cni_rbac_binding                             = undef,
-  Boolean $install_dashboard                                     = false,
-  String $dashboard_version                                      = '1.10.1',
-  Optional[String] $kubernetes_dashboard_url                     = undef,
-  Boolean $schedule_on_controller                                = false,
-  Integer $api_server_count                                      = undef,
-  Boolean $delegated_pki                                         = false,
-  Optional[String] $kubernetes_ca_crt                            = undef,
-  Optional[String] $kubernetes_ca_key                            = undef,
-  Optional[String] $kubernetes_front_proxy_ca_crt                = undef,
-  Optional[String] $kubernetes_front_proxy_ca_key                = undef,
-  String $token                                                  = undef,
-  String $ttl_duration                                           = '24h',
-  String $discovery_token_hash                                   = undef,
-  Optional[String] $sa_pub                                       = undef,
-  Optional[String] $sa_key                                       = undef,
-  Optional[Array] $apiserver_cert_extra_sans                     = [],
-  Optional[Array] $apiserver_extra_arguments                     = [],
-  Optional[Array] $controllermanager_extra_arguments             = [],
-  Optional[Array] $scheduler_extra_arguments                     = [],
-  String $service_cidr                                           = '10.96.0.0/12',
-  Optional[String] $node_label                                   = undef,
-  Optional[String] $controller_address                           = undef,
-  Optional[String] $cloud_provider                               = undef,
-  Optional[String] $cloud_config                                 = undef,
-  Optional[Hash] $apiserver_extra_volumes                        = {},
-  Optional[Hash] $controllermanager_extra_volumes                = {},
-  Optional[Hash] $kubeadm_extra_config                           = undef,
-  Optional[Hash] $kubelet_extra_config                           = undef,
-  Optional[Array] $kubelet_extra_arguments                       = [],
-  Optional[String] $proxy_mode                                   = '',
-  Optional[String] $runc_version                                 = '1.0.0',
-  Optional[String] $runc_source                                  =
+  String $container_runtime                               = 'docker',
+  String $containerd_version                              = '1.4.3',
+  Enum['archive','package'] $containerd_install_method    = 'archive',
+  String $containerd_package_name                         = 'containerd.io',
+  String $docker_package_name                             = 'docker-engine',
+  Optional[String] $docker_version                        = undef,
+  Boolean $pin_packages                                   = false,
+  String $dns_domain                                      = 'cluster.local',
+  Optional[String] $cni_pod_cidr                          = undef,
+  Boolean $controller                                     = false,
+  Boolean $worker                                         = false,
+  Boolean $manage_docker                                  = true,
+  Boolean $manage_etcd                                    = true,
+  Integer $kube_api_bind_port                             = 6443,
+  Optional[String] $kube_api_advertise_address            = undef,
+  String $etcd_version                                    = '3.2.18',
+  Optional[String] $etcd_hostname                         = $facts['networking']['hostname'],
+  String $etcd_data_dir                                   = '/var/lib/etcd',
+  Optional[String] $etcd_ip                               = undef,
+  Optional[Array] $etcd_peers                             = undef,
+  Optional[String] $etcd_initial_cluster                  = undef,
+  Optional[String] $etcd_discovery_srv                    = undef,
+  Enum['new', 'existing'] $etcd_initial_cluster_state     = 'new',
+  Enum['periodic', 'revision'] $etcd_compaction_method    = 'periodic',
+  Variant[String, Integer] $etcd_compaction_retention     = 0,
+  Integer $etcd_max_wals                                  = 5,
+  Integer $etcd_max_request_bytes                         = 1572864,
+  Optional[String] $etcd_listen_metric_urls               = undef,
+  Optional[String] $etcd_ca_key                           = undef,
+  Optional[String] $etcd_ca_crt                           = undef,
+  Optional[String] $etcdclient_key                        = undef,
+  Optional[String] $etcdclient_crt                        = undef,
+  Optional[String] $etcdserver_crt                        = undef,
+  Optional[String] $etcdserver_key                        = undef,
+  Optional[String] $etcdpeer_crt                          = undef,
+  Optional[String] $etcdpeer_key                          = undef,
+  Optional[String] $cni_network_preinstall                = undef,
+  Optional[String] $cni_network_provider                  = undef,
+  Optional[String] $cni_provider                          = undef,
+  Optional[String] $cni_rbac_binding                      = undef,
+  Boolean $install_dashboard                              = false,
+  String $dashboard_version                               = '1.10.1',
+  Optional[String] $kubernetes_dashboard_url              = undef,
+  Boolean $schedule_on_controller                         = false,
+  Integer $api_server_count                               = undef,
+  Boolean $delegated_pki                                  = false,
+  Optional[String] $kubernetes_ca_crt                     = undef,
+  Optional[String] $kubernetes_ca_key                     = undef,
+  Optional[String] $kubernetes_front_proxy_ca_crt         = undef,
+  Optional[String] $kubernetes_front_proxy_ca_key         = undef,
+  String $token                                           = undef,
+  String $ttl_duration                                    = '24h',
+  String $discovery_token_hash                            = undef,
+  Optional[String] $sa_pub                                = undef,
+  Optional[String] $sa_key                                = undef,
+  Array $apiserver_cert_extra_sans                        = [],
+  Array $apiserver_extra_arguments                        = [],
+  Array $controllermanager_extra_arguments                = [],
+  Array $scheduler_extra_arguments                        = [],
+  String $service_cidr                                    = '10.96.0.0/12',
+  Optional[String] $node_label                            = undef,
+  Optional[Array[Hash]] $node_extra_taints                = undef,
+  Optional[String] $controller_address                    = undef,
+  Optional[String] $cloud_provider                        = undef,
+  Optional[String] $cloud_config                          = undef,
+  Hash $apiserver_extra_volumes                           = {},
+  Hash $controllermanager_extra_volumes                   = {},
+  Optional[Hash] $kubeadm_extra_config                    = undef,
+  Optional[Hash] $kubelet_extra_config                    = undef,
+  Array $kubelet_extra_arguments                          = [],
+  String $proxy_mode                                      = '',
+  String $runc_version                                    = '1.0.0',
+  String $runc_source                                     =
     "https://github.com/opencontainers/runc/releases/download/v${runc_version}/runc.amd64",
-  Optional[String] $runc_source_checksum                         = undef,
-  Optional[String] $containerd_archive                           = "containerd-${containerd_version}-linux-amd64.tar.gz",
-  Optional[String] $containerd_archive_checksum                  = undef,
-  Optional[String] $containerd_source                            =
+  Optional[String] $runc_source_checksum                  = undef,
+  String $containerd_archive                              = "containerd-${containerd_version}-linux-amd64.tar.gz",
+  Optional[String] $containerd_archive_checksum           = undef,
+  String $containerd_source                               =
     "https://github.com/containerd/containerd/releases/download/v${containerd_version}/${containerd_archive}",
-  String $containerd_config_template                             = 'kubernetes/containerd/config.toml.erb',
-  Optional[String] $containerd_config_source                     = undef,
-  Optional[Hash] $containerd_plugins_registry                    = {
+  String $containerd_config_template                      = 'kubernetes/containerd/config.toml.epp',
+  Variant[Stdlib::Unixpath, String] $containerd_socket    = '/run/containerd/containerd.sock',
+  Optional[String] $containerd_config_source              = undef,
+  Hash $containerd_plugins_registry                       = {
     'docker.io' => {
       'mirrors' => {
-        'endpoint' => 'https://registry-1.docker.io'
+        'endpoint' => 'https://registry-1.docker.io',
       },
     },
   },
-  Enum['runc','nvidia'] $containerd_default_runtime_name         = 'runc',
-  String $etcd_archive                                           = "etcd-v${etcd_version}-linux-amd64.tar.gz",
-  Optional[String] $etcd_archive_checksum                        = undef,
-  String $etcd_package_name                                      = 'etcd-server',
-  String $etcd_source                                            = "https://github.com/etcd-io/etcd/releases/download/v${etcd_version}/${etcd_archive}",
-  String $etcd_install_method                                    = 'wget',
-  Optional[String] $kubernetes_apt_location                      = undef,
-  Optional[String] $kubernetes_apt_release                       = undef,
-  Optional[String] $kubernetes_apt_repos                         = undef,
-  Optional[String] $kubernetes_key_id                            = undef,
-  Optional[String] $kubernetes_key_source                        = undef,
-  Optional[String] $kubernetes_yum_baseurl                       = undef,
-  Optional[String] $kubernetes_yum_gpgkey                        = undef,
-  Optional[String] $docker_apt_location                          = undef,
-  Optional[String] $docker_apt_release                           = undef,
-  Optional[String] $docker_apt_repos                             = undef,
-  Optional[String] $docker_yum_baseurl                           = undef,
-  Optional[String] $docker_yum_gpgkey                            = undef,
-  Optional[String] $docker_key_id                                = undef,
-  Optional[String] $docker_key_source                            = undef,
-  Optional[String] $docker_storage_driver                        = 'overlay2',
-  Optional[Array] $docker_storage_opts                           = $facts['os']['family'] ? {
+  Enum['runc','nvidia'] $containerd_default_runtime_name  = 'runc',
+  String $containerd_sandbox_image                        = 'registry.k8s.io/pause:3.2',
+  String $etcd_archive                                    = "etcd-v${etcd_version}-linux-amd64.tar.gz",
+  Optional[String] $etcd_archive_checksum                 = undef,
+  String $etcd_package_name                               = 'etcd-server',
+  String $etcd_source                                     = "https://github.com/etcd-io/etcd/releases/download/v${etcd_version}/${etcd_archive}",
+  String $etcd_install_method                             = 'wget',
+  Optional[String] $kubernetes_apt_location               = undef,
+  Optional[String] $kubernetes_apt_release                = undef,
+  Optional[String] $kubernetes_apt_repos                  = undef,
+  Optional[String] $kubernetes_key_id                     = undef,
+  Optional[String] $kubernetes_key_source                 = undef,
+  Optional[String] $kubernetes_yum_baseurl                = undef,
+  Optional[String] $kubernetes_yum_gpgkey                 = undef,
+  Optional[String] $docker_apt_location                   = undef,
+  Optional[String] $docker_apt_release                    = undef,
+  Optional[String] $docker_apt_repos                      = undef,
+  Optional[String] $docker_yum_baseurl                    = undef,
+  Optional[String] $docker_yum_gpgkey                     = undef,
+  Optional[String] $docker_key_id                         = undef,
+  Optional[String] $docker_key_source                     = undef,
+  String $docker_storage_driver                           = 'overlay2',
+  Optional[Array] $docker_storage_opts                    = $facts['os']['family'] ? {
     'RedHat' => ['overlay2.override_kernel_check=true'],
     default  => undef,
   },
-  Optional[String] $docker_extra_daemon_config                   = undef,
-  String $docker_log_max_file                                    = '1',
-  String $docker_log_max_size                                    = '100m',
-  Boolean $disable_swap                                          = true,
-  Boolean $manage_kernel_modules                                 = true,
-  Boolean $manage_sysctl_settings                                = true,
-  Boolean $create_repos                                          = true,
-  String $image_repository                                       = 'k8s.gcr.io',
-  Array[String] $default_path                                    = ['/usr/bin', '/usr/sbin', '/bin', '/sbin', '/usr/local/bin'],
-  String $cgroup_driver                                          = $facts['os']['family'] ? {
-    'RedHat' => 'systemd',
-    default  => 'cgroupfs',
-  },
-  Array[String] $environment                                     = $controller ? {
+  Optional[String] $docker_extra_daemon_config            = undef,
+  Optional[String] $http_proxy                            = undef,
+  Optional[String] $https_proxy                           = undef,
+  Optional[String] $no_proxy                              = undef,
+  Boolean $container_runtime_use_proxy                    = false,
+  Boolean $kubelet_use_proxy                              = false,
+  String $docker_log_max_file                             = '1',
+  String $docker_log_max_size                             = '100m',
+  Boolean $disable_swap                                   = true,
+  Boolean $manage_kernel_modules                          = true,
+  Boolean $manage_sysctl_settings                         = true,
+  Boolean $create_repos                                   = true,
+  String $image_repository                                = 'registry.k8s.io',
+  Array[String] $default_path                             = ['/usr/bin', '/usr/sbin', '/bin', '/sbin', '/usr/local/bin'],
+  String $cgroup_driver                                   = 'systemd',
+  Array[String] $environment                              = $controller ? {
     true    => ['HOME=/root', 'KUBECONFIG=/etc/kubernetes/admin.conf'],
     default => ['HOME=/root', 'KUBECONFIG=/etc/kubernetes/kubelet.conf'],
   },
-  Optional[Array] $ignore_preflight_errors                       = undef,
-  Stdlib::IP::Address $metrics_bind_address                      = '127.0.0.1',
-  Optional[String] $join_discovery_file                          = undef,
-  Optional[String] $skip_phases                                  = undef,
-  Optional[Array] $skip_phases_join                              = undef,
-  Integer $conntrack_max_per_core                                = 32768,
-  Integer $conntrack_min                                         = 131072,
-  String $conntrack_tcp_wait_timeout                             = '1h0m0s',
-  String $conntrack_tcp_stablished_timeout                       = '24h0m0s',
-  String $tmp_directory                                          = '/var/tmp/puppetlabs-kubernetes',
-  Integer $wait_for_default_sa_tries                             = 5,
-  Integer $wait_for_default_sa_try_sleep                         = 6,
-  Hash[String[1], Boolean] $feature_gates                        = {},
+  Optional[Array] $ignore_preflight_errors                = undef,
+  Stdlib::IP::Address $metrics_bind_address               = '127.0.0.1',
+  Optional[String] $join_discovery_file                   = undef,
+  Optional[String] $skip_phases                           = undef,
+  Optional[Array] $skip_phases_join                       = undef,
+  Integer $conntrack_max_per_core                         = 32768,
+  Integer $conntrack_min                                  = 131072,
+  String $conntrack_tcp_wait_timeout                      = '1h0m0s',
+  String $conntrack_tcp_stablished_timeout                = '24h0m0s',
+  String $tmp_directory                                   = '/var/tmp/puppetlabs-kubernetes',
+  Integer $wait_for_default_sa_tries                      = 5,
+  Integer $wait_for_default_sa_try_sleep                  = 6,
+  Hash[String[1], Boolean] $feature_gates                 = {},
 ) {
   if !$facts['os']['family'] in ['Debian', 'RedHat'] {
     notify { "The OS family ${facts['os']['family']} is not supported by this module": }
